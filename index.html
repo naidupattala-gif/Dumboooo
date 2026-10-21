@@ -45,6 +45,9 @@
   button:hover{transform:translateY(-2px)}
   button:focus-visible,.cake:focus-visible{outline:3px solid var(--rose);outline-offset:3px}
 
+  /* Music toggle */
+  #music{position:fixed;top:14px;right:14px;z-index:10;width:44px;height:44px;padding:0;font-size:1.2rem;line-height:44px;background:rgba(255,255,255,.8);color:var(--navy);border:1px solid rgba(143,176,224,.6);backdrop-filter:blur(6px)}
+
   /* Letter */
   #letter{display:none;padding-top:70px;padding-bottom:120px}
   #letter.show{display:block}
@@ -62,6 +65,9 @@
 <body>
 <div id="pattern" aria-hidden="true"></div>
 <div id="float" aria-hidden="true"></div>
+
+<audio id="bgm" src="music.mp3" loop preload="auto"></audio>
+<button id="music" class="hidden" aria-label="Toggle music" title="Music on/off">🔊</button>
 
 <!-- 1. Locked until 12:00 AM, 22 Oct -->
 <section id="lock" class="screen">
@@ -133,6 +139,30 @@
   const tile = "<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><text x='22' y='52' font-size='30' opacity='.13'>🐘</text><text x='88' y='118' font-size='22' opacity='.1'>🐘</text></svg>";
   $('pattern').style.backgroundImage = "url(\"data:image/svg+xml," + encodeURIComponent(tile) + "\")";
 
+  /* ---------- Music ---------- */
+  // Browsers block autoplay until the person interacts, so music starts on the first tap/key.
+  const bgm = $('bgm');
+  bgm.volume = 0.6;
+  let muted = false;
+  function startMusic(){
+    if(muted) return;
+    bgm.play().then(() => {
+      ['pointerdown','keydown','touchstart'].forEach(ev => document.removeEventListener(ev, startMusic));
+    }).catch(() => {});
+  }
+  ['pointerdown','keydown','touchstart'].forEach(ev => document.addEventListener(ev, startMusic));
+  $('music').addEventListener('click', e => {
+    e.stopPropagation();
+    muted = !muted;
+    if(muted){ bgm.pause(); $('music').textContent = '🔇'; }
+    else { bgm.play().catch(()=>{}); $('music').textContent = '🔊'; }
+  });
+  // Pause when the tab is hidden, resume when back
+  document.addEventListener('visibilitychange', () => {
+    if(document.hidden) bgm.pause();
+    else if(!muted && bgm.currentTime > 0) bgm.play().catch(()=>{});
+  });
+
   /* Floating elephants & hearts */
   const icons = ['🐘','🤍','💙','🐘','✨'];
   function spawn(){
@@ -152,7 +182,9 @@
   function reveal(){
     $('lock').classList.add('hidden');
     $('open').classList.remove('hidden');
+    $('music').classList.remove('hidden');
     window.scrollTo(0,0);
+    startMusic(); // works if she already tapped the page while waiting
     for(let i=0;i<25;i++) setTimeout(spawn, i*70);
   }
   function tick(){
